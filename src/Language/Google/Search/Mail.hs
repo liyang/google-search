@@ -99,12 +99,12 @@ type Mail = BooleanM MailOp
 
 instance SearchBuilder MailOp where
     searchBuilder operator = case operator of
-        Plain s         -> searchBuilder s
-        From s          -> "from:"          <> searchBuilder s
-        To s            -> "to:"            <> searchBuilder s
-        Subject s       -> "subject:"       <> searchBuilder s
-        Label t         -> "label:"         <> B.fromText t
-        Has ft          -> "has:"           <> case ft of
+        Plain s         -> searchBuilder    s
+        From s          -> "from:"          <>? s
+        To s            -> "to:"            <>? s
+        Subject s       -> "subject:"       <>? s
+        Label t         -> "label:"         <>! B.fromText t
+        Has ft          -> "has:"           <>! case ft of
             Attachment      -> "attachment"
             BlueInfo        -> "blue-info"
             BlueStar        -> "blue-star"
@@ -121,38 +121,46 @@ instance SearchBuilder MailOp where
             UserLabels      -> "userlabels"
             YellowBang      -> "yellow-bang"
             YellowStar      -> "yellow-star"
-        List s          -> "list:"          <> searchBuilder s
-        Filename s      -> "filename:"      <> searchBuilder s
-        In l            -> "in:"            <> case l of
+        List s          -> "list:"          <>? s
+        Filename s      -> "filename:"      <>? s
+        In l            -> "in:"            <>! case l of
             Anywhere        -> "anywhere"
             Inbox           -> "inbox"
             Trash           -> "trash"
             Spam            -> "spam"
-        Is s            -> "is:"            <> case s of
+        Is s            -> "is:"            <>! case s of
             Important       -> "important"
             Starred         -> "starred"
             Unread          -> "unread"
             Read            -> "read"
             Chat            -> "chat"
-        Cc s            -> "cc:"            <> searchBuilder s
-        Bcc s           -> "bcc:"           <> searchBuilder s
-        After d         -> "after:"         <> date d
-        Before d        -> "before:"        <> date d
-        Older n d       -> "older_than:"    <> duration n d
-        Newer n d       -> "newer_than:"    <> duration n d
-        DeliveredTo s   -> "deliveredto:"   <> searchBuilder s
-        FromCircle s    -> "circle:"        <> searchBuilder s
-        Category c      -> "category:"      <> case c of
+        Cc s            -> "cc:"            <>? s
+        Bcc s           -> "bcc:"           <>? s
+        After d         -> "after:"         <>! date d
+        Before d        -> "before:"        <>! date d
+        Older n d       -> "older_than:"    <>! duration n d
+        Newer n d       -> "newer_than:"    <>! duration n d
+        DeliveredTo s   -> "deliveredto:"   <>? s
+        FromCircle s    -> "circle:"        <>? s
+        Category c      -> "category:"      <>! case c of
             Forums          -> "forums"
             Personal        -> "personal"
             Promotions      -> "promotions"
             Social          -> "social"
             Updates         -> "updates"
-        Larger n u      -> "larger:"        <> size n u
-        Smaller n u     -> "smaller:"       <> size n u
-        RFC822MsgId t   -> "rfc822msgid:"   <> B.fromText t
+        Larger n u      -> "larger:"        <>! size n u
+        Smaller n u     -> "smaller:"       <>! size n u
+        RFC822MsgId t   -> "rfc822msgid:"   <>! B.fromText t
 
       where
+        infix 6 <>?, <>!
+
+        (<>?) :: (SearchBuilder e) => Builder -> e -> PrecBuilder
+        name <>? arg = parentheses 10 $ \ p -> name <> p (searchBuilder arg)
+
+        (<>!) :: Builder -> Builder -> PrecBuilder
+        name <>! arg = PrecBuilder 10 (name <> arg)
+
         date :: Day -> Builder
         date = B.fromString . formatTime defaultTimeLocale "%Y/%m/%d"
 
