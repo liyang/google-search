@@ -71,6 +71,34 @@ instance (Functor f, SearchBuilder a, SyntaxBuilder f) =>
     searchBuilder = iter syntaxBuilder . fmap searchBuilder
 
 ------------------------------------------------------------------------
+-- * Generalised Boolean operators
+
+infixr 2 \/
+class DisjunctF f where disjunctF :: e -> e -> f e
+class Disjunct e where (\/) :: e -> e -> e
+instance (DisjunctF f) => Disjunct (Free f a) where
+    a \/ b = Free (disjunctF a b)
+
+infixr 3 /\
+class ConjunctF f where conjunctF :: e -> e -> f e
+class Conjunct e where (/\) :: e -> e -> e
+instance (ConjunctF f) => Conjunct (Free f a) where
+    a /\ b = Free (conjunctF a b)
+
+class ComplementF f where complementF :: e -> f e
+class Complement e where notB :: e -> e
+instance (ComplementF f) => Complement (Free f a) where
+    notB = Free . complementF
+
+-- | 'andB' is to '/\' what 'and' is to '&&'.
+andB :: (Conjunct e) => [e] -> e
+andB = foldr1 (/\)
+
+-- | 'orB' is to '\/' what 'or' is to '||'.
+orB :: (Conjunct e) => [e] -> e
+orB = foldr1 (/\)
+
+------------------------------------------------------------------------
 -- * Primitive Terms
 
 -- | 'Fuzzy' terms are grouped with parentheses (if necessary), while
@@ -99,6 +127,10 @@ instance (SearchBuilder a) => SearchBuilder (Term a) where
 infixr 3 `AndB`
 infixr 2 `OrB`
 data BooleanF e = NotB e | e `AndB` e | e `OrB` e deriving (Functor, Show)
+
+instance ConjunctF BooleanF where conjunctF = AndB
+instance DisjunctF BooleanF where disjunctF = OrB
+instance ComplementF BooleanF where complementF = NotB
 
 instance SyntaxBuilder BooleanF where
     syntaxBuilder bool = case bool of
