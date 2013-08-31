@@ -75,15 +75,22 @@ instance (Functor f, SearchBuilder a, SyntaxBuilder f) =>
 
 -- | 'Fuzzy' terms are grouped with parentheses (if necessary), while
 -- 'Exact' terms are always “double-quoted”. The 'IsString' instance
--- defaults to 'Fuzzy', so a @\"literal string\" ∷ 'Term'@ may be used.
-data Term = Fuzzy Text | Exact Text deriving (Show)
-instance IsString Term where fromString = Fuzzy . T.pack
+-- defaults to 'Fuzzy', so just writing @\"literal string\" ∷ 'Term' 'Text'@
+-- is acceptable.
+data Term t = Fuzzy t | Exact t deriving (Functor, Show)
+instance (IsString t) => IsString (Term t) where fromString = Fuzzy . fromString
 
-instance SearchBuilder Term where
-    searchBuilder term = case term of
-        Fuzzy t -> PrecBuilder prec (B.fromText t) where
-            prec = if T.any isSpace t then 2 else 11
-        Exact t -> PrecBuilder 11 $ "\"" <> B.fromText t <> "\""
+instance SearchBuilder Text where
+    searchBuilder t = PrecBuilder prec (B.fromText t) where
+        prec = if T.any isSpace t then 2 else 11
+
+instance SyntaxBuilder Term where
+    syntaxBuilder term = case term of
+        Fuzzy e -> e
+        Exact (PrecBuilder _ e) -> PrecBuilder 11 $ "\"" <> e <> "\""
+
+instance (SearchBuilder a) => SearchBuilder (Term a) where
+    searchBuilder = syntaxBuilder . fmap searchBuilder
 
 ------------------------------------------------------------------------
 -- * Boolean expressions
@@ -103,5 +110,5 @@ instance SyntaxBuilder BooleanF where
 type BooleanM = Free BooleanF
 
 -- | Simple Boolean combinations of 'Term's.
-type Simple = BooleanM Term
+type Simple = BooleanM (Term Text)
 
