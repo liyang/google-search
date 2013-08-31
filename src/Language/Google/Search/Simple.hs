@@ -1,6 +1,4 @@
 {-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -35,14 +33,21 @@ instance (Functor f, IsString a) => IsString (Free f a) where
 data Duration = Days | Months | Years deriving (Show)
 data Size = Bytes | KBytes | MBytes deriving (Show)
 
+------------------------------------------------------------------------
+-- * Search expression construction
+
 -- | Render a search expression using Google search syntax.
 class SearchBuilder e where
     searchBuilder :: e -> Builder
 
+-- | Higher-order version of 'SearchBuilder'.
+class SyntaxBuilder f where
+    syntaxBuilder :: f Builder -> Builder
+
 -- | 'SearchBuilder' for 'Free'!
-instance (Functor f, SearchBuilder a, SearchBuilder (f Builder)) =>
+instance (Functor f, SearchBuilder a, SyntaxBuilder f) =>
         SearchBuilder (Free f a) where
-    searchBuilder = iter searchBuilder . fmap searchBuilder
+    searchBuilder = iter syntaxBuilder . fmap searchBuilder
 
 ------------------------------------------------------------------------
 -- * Primitive Terms
@@ -61,12 +66,13 @@ instance SearchBuilder Term where
             (B.singleton '"' <>) . (<> B.singleton '"')
 
 ------------------------------------------------------------------------
+-- * Boolean expressions
 
 -- | The shape of Boolean expressions.
 data BooleanF e = Not e | And [e] | Or [e] deriving (Functor, Show)
 
-instance SearchBuilder (BooleanF Builder) where
-    searchBuilder b = case b of
+instance SyntaxBuilder BooleanF where
+    syntaxBuilder bool = case bool of
         Not e -> "-" <> e
         And es -> ("(" <>) . (<> ")") . fold $ intersperse " " es
         Or es -> ("(" <>) . (<> ")") . fold $ intersperse " OR " es
