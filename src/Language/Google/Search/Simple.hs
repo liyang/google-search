@@ -2,6 +2,15 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
+-- | An orphan lives in this module,
+--
+-- @
+-- instance ('Functor' f, 'IsString' a) => 'IsString' ('Free' f a)
+-- @
+--
+-- so that we can write @\"simple queries\" :: 'Simple'@.
 
 module Language.Google.Search.Simple where
 
@@ -17,6 +26,10 @@ import qualified Data.Text as T
 import Data.Text.Lazy.Builder (Builder)
 import qualified Data.Text.Lazy.Builder as B
 
+instance (Functor f, IsString a) => IsString (Free f a) where
+    fromString = return . fromString
+
+------------------------------------------------------------------------
 -- * Units
 
 data Duration = Days | Months | Years deriving (Show)
@@ -58,12 +71,8 @@ instance SearchBuilder (BooleanF Builder) where
         And es -> ("(" <>) . (<> ")") . fold $ intersperse " " es
         Or es -> ("(" <>) . (<> ")") . fold $ intersperse " OR " es
 
--- | The free Boolean-shaped monad: comes with an 'IsString' instance
--- so we can write @\"simple queries\" :: 'Simple'@. No refunds.
+-- | The free Boolean-shaped monad. No refunds.
 type BooleanM = Free BooleanF
-
-instance (IsString a) => IsString (BooleanM a) where
-    fromString = return . fromString
 
 -- | Simple Boolean combinations of 'Term's.
 type Simple = BooleanM Term
