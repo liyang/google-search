@@ -95,8 +95,8 @@ andB :: (Conjunct e) => [e] -> e
 andB = foldr1 (/\)
 
 -- | 'orB' is to '\/' what 'or' is to '||'.
-orB :: (Conjunct e) => [e] -> e
-orB = foldr1 (/\)
+orB :: (Disjunct e) => [e] -> e
+orB = foldr1 (\/)
 
 ------------------------------------------------------------------------
 -- * Primitive Terms
