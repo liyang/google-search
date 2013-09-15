@@ -71,7 +71,7 @@ data MailOp
     | From Simple
     | To Simple
     | Subject Simple
-    | Label Text
+    | Label (BooleanM Text)
     | Has Feature
     | List Simple
     | Filename Simple
@@ -103,7 +103,7 @@ instance SearchBuilder MailOp where
         From s          -> "from:"          <>? s
         To s            -> "to:"            <>? s
         Subject s       -> "subject:"       <>? s
-        Label t         -> "label:"         <>! B.fromText t
+        Label s         -> "label:"         <>? s
         Has ft          -> "has:"           <>! case ft of
             Attachment      -> "attachment"
             BlueInfo        -> "blue-info"
