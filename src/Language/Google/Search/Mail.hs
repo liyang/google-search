@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | <https://support.google.com/mail/answer/7190>
@@ -14,7 +15,12 @@ import qualified Data.Text.Lazy.Builder.Int as B
 import Data.Time.Calendar (Day)
 import Data.Time.Format (formatTime)
 import Numeric.Natural
+
+#if MIN_VERSION_time(1,5,0)
+import Data.Time.Format (defaultTimeLocale)
+#else
 import System.Locale (defaultTimeLocale)
+#endif
 
 import Language.Google.Search.Simple
 
